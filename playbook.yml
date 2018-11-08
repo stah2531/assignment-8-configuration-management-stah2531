@@ -1,0 +1,44 @@
+---
+- hosts: all
+  name: install apache
+  remote_user: ec2-user
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: apply updates
+    yum: name=* state=latest
+  
+  - name: install httpd
+    yum: name=httpd state=present 
+    
+  - name: install php
+    yum: name=php state=present
+    
+  - name: install php-mysqlnd
+    yum: name=php-mysqlnd state=present
+    
+  - name: start httpd
+    service: name=httpd state=started
+    
+  - name: enable httpd on startup
+    service: name=httpd enabled=yes
+
+- hosts: all
+  name: install wordpress
+  vars:
+    database_name: '{{ lookup("env", "DATABASE_NAME") }}'
+    database_username: '{{ lookup("env", "DATABASE_USERNAME") }}'
+    database_password: '{{ lookup("env", "DATABASE_PASSWORD") }}'
+    database_endpoint: '{{ lookup("env", "DATABASE_ENDPOINT") }}'
+  remote_user: ec2-user
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: download wordpress tarball
+    get_url: url=https://wordpress.org/latest.tar.gz dest=/var/www/wp.tar.gz
+    
+  - name: unpack tarball
+    unarchive: src=/var/www/wp.tar.gz dest=/var/www/html remote_src=yes
+    
+  - name: create wp-config file for wordpress
+    template: src=/home/ec2-user/ansible_templates/wp-config.j2 dest=/var/www/html/wordpress/wp-config.php owner=root
